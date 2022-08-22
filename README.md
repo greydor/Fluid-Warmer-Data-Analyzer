@@ -1,7 +1,5 @@
 # Fluid Warmer Data Analyzer
 
-#### Video Demo:  <https://youtu.be/FI1xM0wqjwk>
-
 ## Purpose:
 
 The purpose of this program is to quickly analyze large numbers of test data files. Each file is analyzed and a summary of all data files is tabulated and saved to an excel file.
