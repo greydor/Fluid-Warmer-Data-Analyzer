@@ -1,4 +1,4 @@
-# Fluid Warmer Data Analyzer
+# AUTOMATE ALL ANALYSIS
 
 ## Purpose:
 

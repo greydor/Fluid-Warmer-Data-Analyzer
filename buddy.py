@@ -28,17 +28,15 @@ def main():
         initialdir=os.getcwd(), title="Select file input file(s)", filetypes=filetypes
     )
     if not filenames:
-        show_error("Error: No File(s) Selected")
         sys.exit()
 
     # select file to append data
     # titles will be added to sheet "Data Summary"
     # if "Data Summary" sheet does not exit, one will be created
     filename_out = filedialog.askopenfilename(
-        initialdir=os.getcwd(), title="Select output file", filetypes=filetypes
+        title="Select output file", filetypes=filetypes
     )
     if not filename_out:
-        show_error("Error: No File Selected")
         sys.exit()
     try:
         wb = load_workbook(filename_out)
@@ -53,8 +51,9 @@ def main():
     # define table titles and append to output workbook
     titles = [
         "Date",
-        "Disposable",
+        "Unit",
         "Battery",
+        "Disposable",
         "Input Temp Target (°C)",
         "Flowrate (mL/min)",
         "Input Temp Mean (°C)",
@@ -83,7 +82,7 @@ def main():
         ws.add_table(table)
     except ValueError:
         pass
-
+    
     # main loop to calculate and append data
     for i in range(len(filenames)):
         # read excel file
@@ -108,7 +107,7 @@ def main():
 
         # calculate data
         date = file["Date"].iloc[0]
-        flowrate, input_target, battery, disposable = extract_filename_data(
+        flowrate, input_target, battery, disposable, unit = extract_filename_data(
             filenames[i]
         )
         if not flowrate:
@@ -124,7 +123,7 @@ def main():
             battery_time = calculate_battery_time(file)
             startup_time, file_edit = strip_startup(file)
             test_time = calculate_test_time(file_edit)
-            fluid_infused = flowrate * test_time.seconds / 60
+            fluid_infused = round(flowrate * test_time.seconds / 60, 1)
         input_mean = round(input.mean(), 2)
         output_mean = round(calculate_output_mean(file), 2)
 
@@ -142,8 +141,9 @@ def main():
         # define list of data
         list = [
             date,
-            disposable,
+            unit,
             battery,
+            disposable,
             input_target,
             flowrate,
             input_mean,
@@ -161,8 +161,7 @@ def main():
         # create new sheet "Data Summary" with calculated values
         wb_input = load_workbook(filenames[i])
         if "Data Summary" in wb_input.sheetnames:
-            show_error(f"Error: {filenames[i]} has already been edited")
-            continue
+            del wb_input["Data Summary"]
         ws2 = wb_input.create_sheet("Data Summary")
         ws2.append(titles)
         ws2.append(list)
@@ -200,16 +199,22 @@ def calculate_test_time(file):
 # returns flowrate, input target temp, battery id#, disposable id#
 def extract_filename_data(filename):
     matches = re.search(
-        r"([0-9]+)\w* ([0-9]+)C? (?:batt)?(\w+) (?:disp)?(\w+).*\.xls", filename, re.I
+        r"([0-9]+)\w* ([0-9\.]+)C\w* (?:batt)?_?(\w+) (?:disp)?_?(\w+) ?(?:unit)?_?(\w+)",
+        filename,
+        re.I,
     )
     if not matches:
         show_error(f"Error: {filename} Invalid Filename")
-        return ("","","","")
+        return ("", "", "", "", "")
+    unit = "N/A"
+    if matches.group(5):
+        unit = matches.group(5)
     return (
         int(matches.group(1)),
         int(matches.group(2)),
         matches.group(3),
         matches.group(4),
+        unit,
     )
 
 
