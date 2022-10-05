@@ -48,7 +48,7 @@ def main():
     except KeyError:
         ws = wb.create_sheet("Data Summary", 0)
 
-    # define table titles and append to output workbook
+    # define table titles and append to output workbook sheet "Data Summary"
     titles = [
         "Date",
         "Unit",
@@ -82,24 +82,26 @@ def main():
         ws.add_table(table)
     except ValueError:
         pass
-    
+
     # main loop to calculate and append data
     for i in range(len(filenames)):
         # read excel file
         try:
-            file = pd.read_excel(filenames[i], skiprows=6, usecols="A:E")
+            file = pd.read_excel(filenames[i], skiprows=6)
         except PermissionError:
             show_error(f"Error: Can't Write to Open File {filenames[i]}")
             continue
         try:
             input = file["Input (°C)"]
             output = file["Output (°C)"]
-            # reservoir data column is optional and will be skipped if not present
-            if not file["Reservoir (°C)"].empty:
-                reservoir = file["Reservoir (°C)"]
         except KeyError:
             show_error(f"Error: {filenames[i]} Invalid Data Structure")
             continue
+        # reservoir data column is optional and will be skipped if not present
+        try:
+            reservoir = file["Reservoir (°C)"]
+        except KeyError:
+            pass
 
         # format time data
         time = file["Time"]
@@ -123,20 +125,29 @@ def main():
             battery_time = calculate_battery_time(file)
             startup_time, file_edit = strip_startup(file)
             test_time = calculate_test_time(file_edit)
-            fluid_infused = round(flowrate * test_time.seconds / 60, 1)
+            try:
+                fluid_infused = round(flowrate * test_time.seconds / 60, 1)
+            except AttributeError:
+                fluid_infused = "error"
         input_mean = round(input.mean(), 2)
         output_mean = round(calculate_output_mean(file), 2)
 
         # reservoir data column is optional and will be skipped if not present
-        if not reservoir.empty:
+        try:
             reservoir_mean = round(reservoir.mean(), 2)
+        except UnboundLocalError:
+            reservoir_mean = "N/A"
 
         # calculates the product of delta temp, time and flowrate
         # this value is for reference only
         # this value should be similar for all tests that pass
-        temp_time_flowrate = round(
-            (output_mean - input_mean) * (test_time.seconds / 60 * flowrate / 1000), 2
-        )
+        try:
+            temp_time_flowrate = round(
+                (output_mean - input_mean) * (test_time.seconds / 60 * flowrate / 1000),
+                2,
+            )
+        except AttributeError:
+            temp_time_flowrate = "error"
 
         # define list of data
         list = [
@@ -199,7 +210,7 @@ def calculate_test_time(file):
 # returns flowrate, input target temp, battery id#, disposable id#
 def extract_filename_data(filename):
     matches = re.search(
-        r"([0-9]+)\w* ([0-9\.]+)C\w* (?:batt)?_?(\w+) (?:disp)?_?(\w+) ?(?:unit)?_?(\w+)",
+        r"([0-9]+)\w* ([0-9\.]+)C\w* (?:batt)?_?(\w+) (?:disp)?_?(\w+)(?: (?:unit)?_?(\w+))?",
         filename,
         re.I,
     )
@@ -223,7 +234,10 @@ def extract_filename_data(filename):
 # this calculation may need further refinement
 def calculate_battery_time(file):
     file = file[(file["Time"] >= pd.Timedelta(5, "m")) & (file["Output (°C)"] <= 30)]
-    return file["Time"].iloc[0]
+    try:
+        return file["Time"].iloc[0]
+    except IndexError:
+        return "error"
 
 
 # returns how long the device took to initially reach 36°C

@@ -1,29 +1,8 @@
-# FLUID WARMER DATA ANALYZER
+# Buddy Temperature Data Analyzer
 
 ## Purpose:
 
 The purpose of this program is to quickly analyze large numbers of test data files. Each file is analyzed and a summary of all data files is tabulated and saved to an excel file.
-
-## Background
-
-The datasets processed by this program are very specific to a fluid temperature test performed in a lab setting. The goal of this test is to validate the performance of a battery-powered fluid heating device. The test consists of pumping fluid through the heating device while the inlet and outlet fluid temperatures are measured over time. The particular data acquisition system being used in this test setup compiles each dataset into an excel file. Each test of this heating system uses a disposable component intended to be discarded after use.
-
-The controlled variables for each test include:
-
--   Flowrate
--   Starting fluid temperature
--   Device tested
--   Battery tested
--   Disposable component tested
-
-The calculations performed on each test include:
-
--   Startup heating time
--   Peak outlet temperature
--   Mean inlet temperature
--   Mean outlet temperature
--   Length of time the battery charge lasted
--   Total fluid volume heated to proper temperature
 
 ## Program instructions
 
@@ -36,15 +15,15 @@ The user is prompted to select one or more files to analyze via a file selection
 The file must be a valid excel file with extension ".xls" or ".xlsx"
 
 The flowrate, input temperature target, battery id# and disposable id# must be recorded in the data set's filename. The filename(s) must be in the following format: 
->{flowrate}ml_m {input temp target}C batt{battery id#} disp{disposable id#}.xlsx
->
->e.g. "92ml_m 10C battA4 disp6.xlsx"
+>{flowrate}ml_m {input temp target}C batt{battery id#} disp{disposable id#} unit{device id#}.xlsx
 
-OR
+optionally, the device id# can be ommitted
 
->{flowrate} {input temp target} {battery id#} {disposable id#}.xls
+optionally, additional text can be added to the end of the filename if desired
 >
->e.g. "92 10 A4 6.xlsx"
+>e.g. "92ml_m 10C battA4 disp6 unit4.xlsx"
+>
+>or "102ml_m 20C battA1 disp3 environmental chamber test.xlsx"
 
 {flowrate} and {input temp target} must be numbers.
 
@@ -68,26 +47,28 @@ Required external libraries:
 
 When the program is launched the user is prompted with a file open dialogue box for the input files and then a second one for the output file. If the files are not excel files, the program shows an error dialogue box and ends the program. 
 
-The output file selected is opened using openpyxl. If the user has this file open, the program will close with an error message because it cannot be written to. If the file does not contain an existing data summary table, a table is created only the headers.
+The output file selected is opened using openpyxl. If the user has this file open, the program will close with an error message because it cannot be written to. If the file does not contain an existing data summary table, a new table is created with headers.
 
 The information in the table includes:
 
-- **Date**: The date of test
-- **Disposable**: Disposable id# used during test
-- **Battery**: Battery id# used during test
-- **Input Temp Target (°C)**: Target input fluid temperature
-- **Flowrate (mL/min)**: Measured flowrate during test
+- **Date**: The date of test.
+- **Disposable**: Disposable id# used during test. Read from filename.
+- **Battery**: Battery id# used during test. Read from filename.
+- **Input Temp Target (°C)**: Target input fluid temperature. Read from filename. This is not used in any calculation, it is intended only to help with sorting similar tests in excel.
+- **Flowrate (mL/min)**: Measured flowrate during test. Read from filename.
+- **Unit**: Device id#. Read from filename.
 - **Input Temp Mean (°C)**: Calculated mean input temperature
 - **Steady-State Output Temp (°C)**: Calculated mean output temperature. Only calculates the average of data during minutes 5 - 12 because the data is typically steady during this period.
-- **Reservoir Temp Mean (°C)**: Optional. Calculates the mean fluid reservoir temperature
-- **Startup Time**: Time that the output fluid temperature took to reach the minimum specification (36°C) 
+- **Reservoir Temp Mean (°C)**: Optional. Calculates the mean fluid reservoir temperature.
+- **Startup Time**: Time that the output fluid temperature took to reach the minimum specification (36°C).
 - **Peak Temp (°C)**: Peak output temperature during the test.
-- **Test Time > 36°C**: Total time the test delivered fluid above the minimum specification (36°C). Checks for the time the output temperature drops below 36°C for 10 consecutive seconds
-- **Fluid Infused (mL)**: Total fluid infused above the minimum specification. Calculated from test time and flowrate
+- **Test Time > 36°C**: Total time the test delivered fluid above the minimum specification (36°C). Checks for the time the output temperature drops below 36°C for 10 consecutive seconds.
+- **Fluid Infused (mL)**: Total fluid infused above the minimum specification. Calculated from test time and flowrate.
 - **Battery Time**: Length of time the battery charge lasted. 
 - **ΔT x Time x Flowrate**: Calculation used to compare across multiple tests.
-- **Comment**: This column is left blank by the program in case the user needs to add comments later.
+- **Filename**: The name of the original file for reference.
+- **Comments**: This column is left blank by the program in case the user needs to add comments later.
 
 The main loop of the program loops through all of the input files selected. One at a time, they are read using pandas library, and calculations are performed.
 
-The data summary is appended to the summary table. Additionally the data summary is added to the original data sheet for reference in a new sheet.
+The data summary is appended to the summary table. Additionally the data summary is added to the original data file for reference in a new sheet.
