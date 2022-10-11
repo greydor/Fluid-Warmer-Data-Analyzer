@@ -54,6 +54,7 @@ def main():
         "Unit",
         "Battery",
         "Disposable",
+        "Trial"
         "Input Temp Target (°C)",
         "Flowrate (mL/min)",
         "Input Temp Mean (°C)",
@@ -84,18 +85,18 @@ def main():
         pass
 
     # main loop to calculate and append data
-    for i in range(len(filenames)):
+    for filename in filenames:
         # read excel file
         try:
-            file = pd.read_excel(filenames[i], skiprows=6)
+            file = pd.read_excel(filename, skiprows=6)
         except PermissionError:
-            show_error(f"Error: Can't Write to Open File {filenames[i]}")
+            show_error(f"Error: Can't Write to Open File {filename}")
             continue
         try:
             input = file["Input (°C)"]
             output = file["Output (°C)"]
         except KeyError:
-            show_error(f"Error: {filenames[i]} Invalid Data Structure")
+            show_error(f"Error: {filename} Invalid Data Structure")
             continue
         # reservoir data column is optional and will be skipped if not present
         try:
@@ -109,11 +110,16 @@ def main():
 
         # calculate data
         date = file["Date"].iloc[0]
-        flowrate, input_target, battery, disposable, unit = extract_filename_data(
-            filenames[i]
-        )
+        (
+            flowrate,
+            input_target,
+            battery,
+            disposable,
+            unit,
+            trial,
+        ) = extract_filename_data(filename)
         if not flowrate:
-            show_error(f"Error: {filenames[i]} Invalid Filename")
+            show_error(f"Error: {filename} Invalid Filename")
             continue
         peak_temp = output.max()
         if peak_temp < 36:
@@ -155,6 +161,7 @@ def main():
             unit,
             battery,
             disposable,
+            trial,
             input_target,
             flowrate,
             input_mean,
@@ -166,20 +173,20 @@ def main():
             fluid_infused,
             battery_time,
             temp_time_flowrate,
-            filenames[i],
+            filename,
         ]
         # check if input file has already been edited
         # create new sheet "Data Summary" with calculated values
-        wb_input = load_workbook(filenames[i])
+        wb_input = load_workbook(filename)
         if "Data Summary" in wb_input.sheetnames:
             del wb_input["Data Summary"]
         ws2 = wb_input.create_sheet("Data Summary")
         ws2.append(titles)
         ws2.append(list)
         try:
-            wb_input.save(filenames[i])
+            wb_input.save(filename)
         except PermissionError:
-            show_error(f"Error: Can't Write to Open File {filenames[i]}")
+            show_error(f"Error: Can't Write to Open File {filename}")
             continue
 
         # append data to "Data Summary Table" sheet in output file
@@ -207,25 +214,35 @@ def calculate_test_time(file):
 
 
 # extract info from filename
-# returns flowrate, input target temp, battery id#, disposable id#
+# returns flowrate, input target temp, battery id#, disposable id#, unit id#, trial#
 def extract_filename_data(filename):
     matches = re.search(
-        r"([0-9]+)\w* ([0-9\.]+)C\w* (?:batt)?_?(\w+) (?:disp)?_?(\w+)(?: (?:unit)?_?(\w+))?",
+        r"([0-9]+)\w* ([0-9\.]+)\w* (?:batt)?_?(\w+)"
+        r"(?: (?:disp)_?(\w+))?(?: (?:unit)_?(\w+))?(?: (?:trial)_?(\w+))?",
         filename,
         re.I,
     )
     if not matches:
         show_error(f"Error: {filename} Invalid Filename")
-        return ("", "", "", "", "")
+        return ("", "", "", "", "", "")
+    # Define default for optional values.
+    disp = "N/A"
     unit = "N/A"
+    trial = "N/A"
+    # Set optional values if they exist in filename
+    if matches.group(4):
+        disp = matches.group(4)
     if matches.group(5):
         unit = matches.group(5)
+    if matches.group(6):
+        trial = matches.group(6)
     return (
-        int(matches.group(1)),
-        int(matches.group(2)),
-        matches.group(3),
-        matches.group(4),
+        int(matches.group(1)), # Flowrate
+        int(matches.group(2)), # Input target temp
+        matches.group(3), # Battery ID#
+        disp,
         unit,
+        trial,
     )
 
 
