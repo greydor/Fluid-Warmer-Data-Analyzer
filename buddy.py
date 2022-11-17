@@ -54,7 +54,7 @@ def main():
         "Unit",
         "Battery",
         "Disposable",
-        "Trial"
+        "Trial",
         "Input Temp Target (°C)",
         "Flowrate (mL/min)",
         "Input Temp Mean (°C)",
